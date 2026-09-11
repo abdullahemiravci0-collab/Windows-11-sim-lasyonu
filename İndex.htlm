@@ -1,319 +1,242 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full select-none overflow-hidden dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Windows 11 Pro 24H2 - Web Operating System & Simulator</title>
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Font Awesome Icons CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script>
-tailwind.config = {
-darkMode: 'class',
-theme: {
-extend: {
-fontFamily: {
-sans: ['Segoe UI', 'Inter', 'sans-serif'],
-mono: ['JetBrains Mono', 'Consolas', 'monospace'],
-},
-colors: {
-winblue: '#0078d4',
-winaccent: '#2563eb',
-windark: '#1f1f1f',
-winlight: '#f3f3f3',
+{
+  "name": "windows11-enterprise-apo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^6.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig } from 'vite';
+
+export default defineConfig(() => {
+  return {
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+      },
+    },
+    server: {
+      port: 3000,
+    },
+  };
+});{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "server.ts"]
+}node_modules
+dist
+.env
+.DS_Store
+*.logimport express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  app.use(express.json());
+
+  // Avcı AI yerel akıllı yanıt motoru
+  const getSmartFallbackReply = (message: string): string => {
+    const q = message.toLowerCase();
+    if (q.includes("memz") || q.includes("virüs") || q.includes("trojan")) {
+      return "⚠️ DİKKAT apo! Masaüstündeki MEMZ_Payload.exe simülasyonu çalıştırıldığında Windows 11 glitch efektleri, Nyan Cat animasyonu ve BSOD tetiklenir. Güvenlik modülüyle dilediğin zaman sistemi kurtarabilirsin!";
+    }
+    if (q.includes("undertale") || q.includes("sans")) {
+      return "💀 Sans savaşı için apo'ya özel taktik: Mavi kemiklerde kesinlikle dur, blaster ateşlendiğinde köşelere kaç! Kararlılığını kaybetme apo.";
+    }
+    if (q.includes("apo") || q.includes("kimsin")) {
+      return "👑 apo, bu sistemin (apo-PC) mutlak Yöneticisidir (Administrator). Ben de apo'nun komutlarını yerine getiren Windows 11 yerel yapay zeka asistanı Avcı AI'yım.";
+    }
+    return `apo, "${message}" komutunu aldım. Windows 11 Enterprise çekirdeğim arka planda sistemi stabil tutuyor.`;
+  };
+
+  app.post("/api/avci-chat", async (req, res) => {
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "Mesaj giriniz" });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.json({ reply: getSmartFallbackReply(message), mode: "local" });
+    }
+
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const promptText = `Sen Windows 11 Enterprise (apo) işletim sisteminin yerel asistanı "Avcı AI"sın. Yönetici apo'ya sadık, zeki bir Windows dostusun. Mesaj: "${message}"`;
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: [{ role: "user", parts: [{ text: promptText }] }]
+      });
+      return res.json({ reply: response.text, mode: "gemini" });
+    } catch {
+      return res.json({ reply: getSmartFallbackReply(message), mode: "fallback" });
+    }
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", os: "Windows 11 Enterprise (apo)", user: "apo" });
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
+
+startServer();export type AppId =
+  | 'user'
+  | 'edge'
+  | 'undertale'
+  | 'avci'
+  | 'memz'
+  | 'notepad'
+  | 'paint'
+  | 'cmd'
+  | 'taskmgr'
+  | 'settings'
+  | 'calculator';
+
+export interface WindowState {
+  id: AppId;
+  title: string;
+  icon: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isMinimized: boolean;
+  isMaximized: boolean;
+  zIndex: number;
 }
+
+export type MemzStage =
+  | 'idle'
+  | 'warning1'
+  | 'warning2'
+  | 'payload'
+  | 'bsod'
+  | 'nyan'
+  | 'recovery'
+  | 'recovering';
+
+export interface PopupAlert {
+  id: string;
+  title: string;
+  text: string;
+  x: number;
+  y: number;
+  icon: 'error' | 'warning' | 'info';
 }
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'avci';
+  text: string;
+  timestamp: string;
 }
-</script>
-<style>
-body {
-touch-action: manipulation;
--webkit-tap-highlight-color: transparent;
-user-select: none;
--webkit-user-select: none;
-font-family: 'Segoe UI', 'Inter', sans-serif;
-}
-.mica-glass {
-background: rgba(32, 32, 32, 0.82);
-backdrop-filter: blur(30px) saturate(180%);
--webkit-backdrop-filter: blur(30px) saturate(180%);
-border: 1px solid rgba(255, 255, 255, 0.15);
-}
-.light .mica-glass {
-background: rgba(243, 243, 243, 0.88);
-backdrop-filter: blur(30px) saturate(180%);
-border: 1px solid rgba(0, 0, 0, 0.12);
-}
-.window-glass {
-background: rgba(25, 25, 28, 0.94);
-backdrop-filter: blur(25px);
-border: 1px solid rgba(255, 255, 255, 0.14);
-box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-}
-.light .window-glass {
-background: rgba(255, 255, 255, 0.96);
-border: 1px solid rgba(0, 0, 0, 0.15);
-box-shadow: 0 15px 35px rgba(0, 0, 0, 0.18);
-}
-.active-tap:active {
-transform: scale(0.95);
-transition: transform 0.08s ease;
-}
-/* Scrollbars */
-::-webkit-scrollbar {
-width: 6px;
-height: 6px;
-}
-::-webkit-scrollbar-thumb {
-background: rgba(255, 255, 255, 0.25);
-border-radius: 99px;
-}
-.light ::-webkit-scrollbar-thumb {
-background: rgba(0, 0, 0, 0.25);
-}
-/* Keyframe Animations */
-@keyframes windowOpen {
-from { opacity: 0; transform: scale(0.92) translateY(12px); }
-to { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes fadeIn {
-from { opacity: 0; }
-to { opacity: 1; }
-}
-@keyframes pulseGlow {
-0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
-50% { box-shadow: 0 0 35px rgba(59, 130, 246, 0.9); }
-}
-@keyframes glitchShake {
-0% { transform: translate(0, 0) rotate(0deg); }
-20% { transform: translate(-5px, 5px) rotate(-1deg); }
-40% { transform: translate(5px, -5px) rotate(1deg); }
-60% { transform: translate(-3px, -2px) rotate(0deg); }
-80% { transform: translate(3px, 4px) rotate(1deg); }
-100% { transform: translate(0, 0) rotate(0deg); }
-}
-.animate-window-open { animation: windowOpen 0.22s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
-.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-.animate-pulse-glow { animation: pulseGlow 2s infinite; }
-.glitch-shake { animation: glitchShake 0.15s infinite; }
-.window-header { cursor: move; }
-</style>
-</head>
-<body class="h-dvh w-screen text-slate-100 bg-cover bg-center overflow-hidden flex flex-col justify-between relative dark select-none" id="win-desktop-bg" style="background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop');">
-<!-- Screen Brightness Filter -->
-<div id="brightness-overlay" class="fixed inset-0 bg-black pointer-events-none z-[100] transition-opacity duration-200 opacity-0"></div>
-<!-- Red Glitch Overlay for Virus Simulator -->
-<div id="virus-glitch-overlay" class="fixed inset-0 bg-red-600/20 pointer-events-none z-[98] hidden mix-blend-overlay"></div>
-<!-- Toast Notification Container -->
-<div id="toast-container" class="fixed top-4 right-4 z-[110] space-y-2 pointer-events-none"></div>
-<!-- Mobile Status Bar (Visible on small screens) -->
-<div class="sm:hidden w-full h-6 bg-black/40 backdrop-blur-md px-3 flex items-center justify-between text-[11px] text-slate-200 font-mono z-40 shrink-0 border-b border-white/10">
-<div class="flex items-center space-x-1">
-<span class="font-bold">TR Turkcell</span>
-<span class="text-[9px] bg-blue-600 px-1 rounded">5G</span>
-</div>
-<div class="flex items-center space-x-2 text-[10px]">
-<i class="fa-solid fa-wifi"></i>
-<i class="fa-solid fa-battery-three-quarters"></i>
-<span id="mobile-status-time">12:00</span>
-</div>
-</div>
-<!-- ================= INITIAL POWER ON OVERLAY ================= -->
-<div id="power-overlay" class="fixed inset-0 bg-slate-950 z-[95] flex flex-col items-center justify-center p-6 text-white text-center">
-<div class="max-w-md w-full space-y-8 flex flex-col items-center">
-<i class="fa-brands fa-windows text-blue-500 text-7xl sm:text-8xl drop-shadow-[0_0_30px_rgba(59,130,246,0.8)]"></i>
-<div>
-<h1 class="text-2xl sm:text-3xl font-bold tracking-tight mb-1">Windows 11 Pro 24H2</h1>
-<p class="text-xs sm:text-sm text-slate-400">Sanal İşletim Sistemi & Sürücü Simülatörü</p>
-</div>
-<button onclick="powerOnSystem()" class="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-2xl text-base font-bold shadow-2xl transition-all duration-300 active-tap flex items-center space-x-3 border border-blue-400/30 animate-pulse-glow">
-<i class="fa-solid fa-power-off text-xl text-blue-200 group-hover:rotate-90 transition-transform duration-300"></i>
-<span>SİSTEMİ BAŞLAT (POWER ON)</span>
-</button>
-<button onclick="powerOnSystem(true)" class="text-xs text-slate-400 hover:text-blue-400 underline transition">
-⚡ Doğrudan Masaüstüne Atla (Hızlı Başlat)
-</button>
-</div>
-</div>
-<!-- ================= BOOT SCREEN OVERLAY ================= -->
-<div id="boot-screen" class="fixed inset-0 bg-black z-[90] hidden flex-col items-center justify-between py-16 text-white animate-fade-in">
-<div class="my-auto flex flex-col items-center space-y-8">
-<i class="fa-brands fa-windows text-blue-500 text-7xl sm:text-8xl drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]"></i>
-<div class="relative w-10 h-10">
-<div class="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
-<div class="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-</div>
-<p id="boot-status-text" class="text-xs text-slate-400 font-medium tracking-wide">Windows 11 Başlatılıyor...</p>
-</div>
-<div class="text-[11px] text-slate-500 font-mono">Windows 11 Pro Build 26100.2454 • Turkish Edition</div>
-</div>
-<!-- ================= LOCK SCREEN OVERLAY ================= -->
-<div id="lock-screen" class="fixed inset-0 z-[80] hidden bg-cover bg-center flex flex-col justify-between p-6 text-white transition-all duration-500" style="background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop');">
-<!-- Lock Screen Clock -->
-<div id="lock-clock-container" class="mt-12 text-center transition-transform duration-300 cursor-pointer" onclick="showPinPad()">
-<h1 id="lock-time" class="text-6xl sm:text-8xl font-light tracking-tight">12:00</h1>
-<p id="lock-date" class="text-sm sm:text-base text-slate-200 mt-2 font-medium">Cuma, 11 Eylül</p>
-<p class="text-xs text-blue-300/80 mt-4 animate-bounce"><i class="fa-solid fa-chevron-up mr-1"></i>Kilit Açmak İçin Dokunun veya Tıklayın</p>
-</div>
-<!-- PIN Entry Card -->
-<div id="pin-pad-card" class="hidden my-auto mx-auto window-glass p-6 rounded-3xl w-full max-w-xs text-center space-y-4 border border-white/10 animate-window-open">
-<div class="w-14 h-14 bg-blue-600/30 border border-blue-400/40 rounded-full flex items-center justify-center mx-auto text-2xl text-blue-400 shadow-inner">
-<i class="fa-solid fa-user"></i>
-</div>
-<div>
-<h3 class="text-sm font-semibold">Yönetici Girişi</h3>
-<p class="text-[10px] text-slate-400">Varsayılan PIN: 1234</p>
-</div>
-<div class="relative">
-<input type="password" id="pin-input" maxlength="4" placeholder="PIN Girin" readonly class="w-full bg-black/40 border border-white/20 rounded-xl py-2.5 text-center text-lg tracking-widest text-white outline-none focus:border-blue-500 font-mono">
-</div>
-<div class="grid grid-cols-3 gap-2">
-<button onclick="appendPin('1')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">1</button>
-<button onclick="appendPin('2')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">2</button>
-<button onclick="appendPin('3')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">3</button>
-<button onclick="appendPin('4')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">4</button>
-<button onclick="appendPin('5')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">5</button>
-<button onclick="appendPin('6')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">6</button>
-<button onclick="appendPin('7')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">7</button>
-<button onclick="appendPin('8')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">8</button>
-<button onclick="appendPin('9')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">9</button>
-<button onclick="clearPin()" class="p-3 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-xl text-xs font-bold active-tap">C</button>
-<button onclick="appendPin('0')" class="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold active-tap">0</button>
-<button onclick="unlockSystem()" class="p-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold text-white active-tap"><i class="fa-solid fa-arrow-right"></i></button>
-</div>
-<button onclick="unlockSystem(true)" class="text-[11px] text-blue-400 underline">Şifresiz Hızlı Giriş Yap</button>
-</div>
-<div class="flex justify-between items-center text-xs text-slate-300">
-<span><i class="fa-solid fa-wifi mr-1.5"></i>Wi-Fi 6E Bağlı</span>
-<button onclick="powerOnSystem(true)" class="hover:text-white"><i class="fa-solid fa-power-off text-base"></i></button>
-</div>
-</div>
-<!-- ================= DESKTOP MAIN GRID ================= -->
-<main id="desktop-grid" class="flex-1 p-3 grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 auto-rows-min gap-3 overflow-y-auto z-10" onclick="closeAllFlyouts(event)">
-<!-- Desktop Shortcuts -->
-<div onclick="openApp('explorer')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-folder-closed"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Dosya Gezgini</span>
-</div>
-<div onclick="openApp('taskmgr')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-chart-line"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Görev Yöneticisi</span>
-</div>
-<div onclick="openApp('edge')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-brands fa-edge"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">MS Edge</span>
-</div>
-<div onclick="openApp('copilot')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-wand-magic-sparkles"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Copilot AI</span>
-</div>
-<div onclick="openApp('settings')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-slate-600 to-slate-800 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-gear"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Ayarlar</span>
-</div>
-<div onclick="openApp('terminal')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-slate-900 border border-emerald-500/40 rounded-2xl flex items-center justify-center text-emerald-400 text-lg shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-terminal"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Terminal</span>
-</div>
-<div onclick="openApp('notepad')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-cyan-600 to-teal-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-file-pen"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Not Defteri</span>
-</div>
-<div onclick="openApp('calc')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-calculator"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Hesap Mak.</span>
-</div>
-<div onclick="openApp('minesweeper')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-rose-600 to-pink-500 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-land-mine-on"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Mayın Tarlası</span>
-</div>
-<div onclick="openApp('paint')" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-white/10 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-paint-brush"></i>
-</div>
-<span class="text-[10px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">Paint</span>
-</div>
-<!-- Virus Simulation Launcher -->
-<div onclick="startNoEscapeVirus()" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-red-600 to-amber-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition animate-pulse">
-<i class="fa-solid fa-skull"></i>
-</div>
-<span class="text-[10px] font-semibold text-red-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">NoEscape Virüsü</span>
-</div>
-<!-- BSOD Dedicated Shortcut -->
-<div onclick="triggerBSOD()" class="active-tap flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition group cursor-pointer text-center">
-<div class="w-12 h-12 bg-gradient-to-tr from-blue-700 to-sky-600 rounded-2xl flex items-center justify-center text-white text-xl shadow-lg mb-1 group-hover:scale-105 transition">
-<i class="fa-solid fa-triangle-exclamation"></i>
-</div>
-<span class="text-[10px] font-semibold text-blue-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] line-clamp-1">BSOD Test Et</span>
-</div>
-</main>
-<!-- ================= TASKBAR ================= -->
-<footer class="w-full h-12 mica-glass border-t border-white/10 flex items-center justify-between px-3 z-40 relative shrink-0">
-<!-- Left: Widgets Button -->
-<button onclick="toggleWidgets()" class="p-2 hover:bg-white/10 rounded-xl active-tap text-blue-400 text-sm flex items-center space-x-1.5" title="Widgets">
-<i class="fa-solid fa-border-all"></i>
-<span class="text-[11px] font-semibold text-slate-200 hidden md:inline">24°C Güneşli</span>
-</button>
-<!-- Center: Taskbar Icons -->
-<div class="flex items-center space-x-1 sm:space-x-2">
-<button onclick="toggleStartMenu()" class="p-2 hover:bg-white/10 rounded-xl active-tap text-blue-500 text-xl drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]" title="Başlat">
-<i class="fa-brands fa-windows"></i>
-</button>
-<button onclick="openApp('explorer')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-amber-400 text-base" title="Dosya Gezgini">
-<i class="fa-solid fa-folder-closed"></i>
-</button>
-<button onclick="openApp('edge')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-emerald-400 text-base" title="Microsoft Edge">
-<i class="fa-brands fa-edge"></i>
-</button>
-<button onclick="openApp('copilot')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-pink-400 text-base" title="Copilot AI">
-<i class="fa-solid fa-wand-magic-sparkles"></i>
-</button>
-<button onclick="openApp('taskmgr')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-blue-400 text-base" title="Görev Yöneticisi">
-<i class="fa-solid fa-chart-line"></i>
-</button>
-<button onclick="openApp('settings')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-slate-300 text-base" title="Ayarlar">
-<i class="fa-solid fa-gear"></i>
-</button>
-<button onclick="openApp('terminal')" class="p-2 hover:bg-white/10 rounded-xl active-tap text-emerald-400 text-base" title="Terminal">
-<i class="fa-solid fa-terminal"></i>
-</button>
-</div>
-<!-- Right: System Tray & Quick Settings -->
-<div class="flex items-center space-x-1 sm:space-x-2">
-<button onclick="toggleCalendar()" class="text-right hover:bg-white/10 px-2 py-1 rounded-xl active-tap">
-<div id="taskbar-time" class="font-bold font-mono text-xs text-white">12:00</div>
-<div id="taskbar-date" class="text-[9px] text-slate-400">11.09.2026</div>
-</button>
-<button onclick="toggleQuickSettings()" class="flex items-center space-x-1.5 p-1.5 hover:bg-white/10 rounded-xl active-tap text-slate-200 text-xs">
-<i class="fa-solid fa-wifi text-xs"></i>
-<i class="fa-solid fa-volume-high text-xs"></i>
-<i class="fa-solid fa-battery-three-quarters text-xs"></i>
-</button>
-</div>
-</footer>
-<!-- ================= WINDOWS APPLICATION WINDOWS ================= -->
-<!-- APP 1: File Explorer -->
-<div id="win-explorer" class="win-app hidden absolute top-12 left-2 right-2 sm:left-16 sm:right-auto sm:w-[680px] h-[75vh] sm:h-[480px] window-glass rounded-2xl flex flex-col overflow-hidden z-20 a
+
+export interface DesktopFile {
+  id: string;
+  name: string;
+  extension: string;
+  size: string;
+  date: string;
+  type: 'text' | 'image' | 'game' | 'code' | 'folder';
+  content?: string;
+  imageUrl?: string;
+}├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── server.ts
+├── index.html
+├── .gitignore
+└── src/
+    ├── main.tsx
+    ├── App.tsx
+    ├── index.css
+    ├── types.ts
+    ├── utils/
+    │   └── audio.ts                  (8-Bit Synthesizer & Undertale sesleri)
+    └── components/
+        ├── UndertaleApp.tsx          (Orijinal Sans, Papyrus, Undyne savaşları)
+        ├── MemzSimulation.tsx        (MEMZ virüs simülasyonu, BSOD, Nyan Cat)
+        ├── AvciAiApp.tsx             (apo'ya özel AI asistan)
+        ├── Taskbar.tsx               (Windows 11 Görev Çubuğu & Başlat)
+        ├── StartMenu.tsx             (Windows 11 Başlat Menüsü)
+        ├── DesktopIcons.tsx          (Masaüstü simgeleri & kısayollar)
+        ├── DesktopContextMenu.tsx    (Masaüstü sağ tık menüsü)
+        ├── WindowFrame.tsx           (Aero/Mica pencereleri)
+        ├── CalendarNotificationFlyout.tsx
+        ├── QuickSettingsPanel.tsx    (Hızlı ayarlar: Wi-Fi, Ses, Parlaklık)
+        ├── WidgetsBoard.tsx          (Hava durumu, Borsa, Haberler)
+        ├── LockScreen.tsx            (apo Yönetici Kilit Ekranı)
+        ├── EdgeApp.tsx               (Edge Tarayıcı simülasyonu)
+        ├── NotepadApp.tsx            (Not Defteri)
+        ├── PaintApp.tsx              (Çizim & Boyama uygulaması)
+        ├── CalculatorApp.tsx         (Hesap Makinesi)
+        ├── CmdApp.tsx                (Komut İstemi & Windows Terminal)
+        ├── TaskManagerApp.tsx        (Görev Yöneticisi & Servisler)
+        ├── SettingsApp.tsx           (Windows 11 Ayarları)
+        └── UserFolderApp.tsx         (apo Dosya Gezgini)
